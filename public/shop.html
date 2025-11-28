@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Lift - Shop</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="window.location.href='shop.html'">🛒 Shop Lift</div>
+        <div class="header-controls" style="display: flex; align-items: center; gap: 20px;">
+            <span id="welcomeMessage" style="font-weight: bold; color: white;"></span>
+            
+            <button class="cart-button" onclick="window.location.href='cart.html'">
+                🛒 Cart <span id="cartCount" class="cart-count">0</span>
+            </button>
+            <button onclick="logout()" style="background-color: transparent; border: 1px solid white; padding: 5px 10px;">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2>All Products</h2>
+        <div class="product-grid" id="productGrid">
+            </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('userName') || localStorage.getItem('userRole') !== 'customer') {
+                alert('Session expired or access denied. Please log in.');
+                window.location.href = 'index.html';
+                return; 
+            }
+            
+            const userName = localStorage.getItem('userName');
+            document.getElementById('welcomeMessage').textContent = `Welcome, ${userName}!`;
+            
+            updateCartCount();
+            fetchAndDisplayProducts();
+        });
+
+        function logout() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        }
+
+        function getCart() {
+            const cart = localStorage.getItem('cart');
+            return cart ? JSON.parse(cart) : [];
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCount();
+        }
+
+        function updateCartCount() {
+            const cart = getCart();
+            const count = cart.reduce((total, item) => total + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+
+        async function fetchAndDisplayProducts() {
+            const response = await fetch('/api/products');
+            const products = await response.json();
+            const grid = document.getElementById('productGrid');
+            
+            grid.innerHTML = '';
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                
+                let actionButtonHTML = '';
+                let stockStatusHTML = '';
+
+                if (product.stock_quantity > 0) {
+                    actionButtonHTML = `
+                        <div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
+                            <input type="number" id="qty_${product.id}" value="1" min="1" max="${product.stock_quantity}" style="width: 60px; padding: 8px; border-radius: 5px;">
+                            <button onclick="addToCart(${product.id}, '${product.name}', ${product.price}, ${product.stock_quantity})" style="flex-grow: 1; padding: 8px;">Add to Cart</button>
+                        </div>
+                    `;
+                    stockStatusHTML = `<div style="font-size: 0.9em; color: var(--primary-green);">In Stock (${product.stock_quantity})</div>`;
+                } else {
+                    actionButtonHTML = `<button disabled style="background-color: #ccc; cursor: not-allowed;">Out of Stock</button>`;
+                    stockStatusHTML = `<div style="font-size: 0.9em; color: red; font-weight: bold;">OUT OF STOCK</div>`;
+                }
+
+                card.innerHTML = `
+                    <img src="${product.image_url}" alt="${product.name}">
+                    <div class="product-info">
+                        <h3>${product.name}</h3>
+                        <p>${product.description.substring(0, 50)}...</p>
+                        <div class="product-price">₱${product.price.toFixed(2)}</div>
+                        ${stockStatusHTML}
+                        ${actionButtonHTML}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function addToCart(id, name, price, maxStock) {
+            const quantityInput = document.getElementById(`qty_${id}`);
+            const quantityToAdd = parseInt(quantityInput.value);
+            
+            if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
+                alert("Please enter a valid quantity.");
+                return;
+            }
+
+            const cart = getCart();
+            const existingItem = cart.find(item => item.id === id);
+            
+            const totalQuantityInCart = existingItem ? existingItem.quantity + quantityToAdd : quantityToAdd;
+
+            if (totalQuantityInCart > maxStock) {
+                alert(`Cannot add ${quantityToAdd} item(s). Only ${maxStock - (existingItem ? existingItem.quantity : 0)} more left in stock!`);
+                return;
+            }
+
+            if (existingItem) {
+                existingItem.quantity += quantityToAdd;
+            } else {
+                cart.push({ id, name, price, quantity: quantityToAdd });
+            }
+
+            saveCart(cart);
+            alert(`${quantityToAdd} x ${name} added to cart!`);
+        }
+    </script>
+</body>
+</html>

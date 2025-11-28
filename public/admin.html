@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Lift - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo">🛠️ Shop Lift Admin</div>
+        <button onclick="logout()" style="background-color: transparent; border: 1px solid white; padding: 5px 10px;">Logout</button>
+    </header>
+    
+    <div class="container">
+        <h2>Add New Product</h2>
+        <form id="addProductForm">
+            <div class="form-group">
+                <label for="name">Product Name:</label>
+                <input type="text" id="name" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="price">Price (₱):</label>
+                <input type="number" id="price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="stock_quantity">Stock Quantity:</label>
+                <input type="number" id="stock_quantity" min="0" required value="1">
+            </div>
+            <div class="form-group">
+                <label for="image_url">Image URL (Placeholder):</label>
+                <input type="text" id="image_url" value="Link of the Image" required>
+            </div>
+            <button type="submit">Add Product</button>
+            <p id="addMessage" style="margin-top: 10px; color: green;"></p>
+        </form>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>Current Products</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="productsTableBody">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="editModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200;">
+        <div class="container" style="max-width: 500px; margin-top: 50px;">
+            <h2>Edit Product</h2>
+            <form id="editProductForm">
+                <input type="hidden" id="editId">
+                
+                <div class="form-group">
+                    <label for="editName">Product Name:</label>
+                    <input type="text" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description:</label>
+                    <textarea id="editDescription" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editPrice">Price (₱):</label>
+                    <input type="number" id="editPrice" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStock">Stock Quantity:</label>
+                    <input type="number" id="editStock" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="editImageURL">Image URL:</label>
+                    <input type="text" id="editImageURL" required>
+                </div>
+                
+                <p id="editMessage" style="margin-top: 10px;"></p>
+                <button type="submit">Save Changes</button>
+                <button type="button" onclick="closeEditModal()" style="background-color: #aaa; margin-left: 10px;">Cancel</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        if (localStorage.getItem('userRole') !== 'admin') {
+            alert('Access denied. Redirecting to login.');
+            window.location.href = 'index.html';
+        }
+        
+        function logout() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        }
+
+        const tableBody = document.getElementById('productsTableBody');
+        const addProductForm = document.getElementById('addProductForm');
+        const editProductForm = document.getElementById('editProductForm');
+        const editModal = document.getElementById('editModal');
+        const addMessage = document.getElementById('addMessage');
+        const editMessage = document.getElementById('editMessage');
+
+        let allProducts = [];
+
+        async function fetchProducts() {
+            const response = await fetch('/api/products');
+            allProducts = await response.json();
+            
+            tableBody.innerHTML = '';
+            allProducts.forEach(product => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>₱${product.price.toFixed(2)}</td> 
+                    <td>${product.stock_quantity}</td>
+                    <td>
+                        <button onclick="openEditModal(${product.id})" style="background-color: orange; margin-right: 5px;">Edit</button>
+                        <button onclick="removeProduct(${product.id})">Remove</button>
+                    </td>
+                `;
+            });
+        }
+
+        function openEditModal(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) {
+                alert('Product not found for editing.');
+                return;
+            }
+
+            document.getElementById('editId').value = product.id;
+            document.getElementById('editName').value = product.name;
+            document.getElementById('editDescription').value = product.description;
+            document.getElementById('editPrice').value = product.price.toFixed(2);
+            document.getElementById('editStock').value = product.stock_quantity;
+            document.getElementById('editImageURL').value = product.image_url;
+            editMessage.textContent = '';
+            
+            editModal.style.display = 'block';
+        }
+
+        function closeEditModal() {
+            editModal.style.display = 'none';
+        }
+
+        editProductForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const updatedProduct = {
+                id: parseInt(document.getElementById('editId').value),
+                name: document.getElementById('editName').value,
+                description: document.getElementById('editDescription').value,
+                price: parseFloat(document.getElementById('editPrice').value),
+                stock_quantity: parseInt(document.getElementById('editStock').value),
+                image_url: document.getElementById('editImageURL').value
+            };
+
+            editMessage.textContent = 'Saving...';
+            editMessage.style.color = 'blue';
+
+            const response = await fetch('/api/edit-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedProduct)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                editMessage.textContent = 'Changes saved!';
+                editMessage.style.color = 'green';
+                fetchProducts();
+                setTimeout(closeEditModal, 1000);
+            } else {
+                editMessage.textContent = 'Error saving product: ' + data.message;
+                editMessage.style.color = 'red';
+            }
+        });
+
+        addProductForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const newProduct = {
+                name: document.getElementById('name').value,
+                description: document.getElementById('description').value,
+                price: parseFloat(document.getElementById('price').value),
+                stock_quantity: parseInt(document.getElementById('stock_quantity').value), 
+                image_url: document.getElementById('image_url').value
+            };
+
+            const response = await fetch('/api/add-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newProduct)
+            });
+
+            if (response.ok) {
+                addMessage.textContent = 'Product added successfully!';
+                addProductForm.reset();
+                fetchProducts();
+            } else {
+                addMessage.textContent = 'Error adding product.';
+                addMessage.style.color = 'red';
+            }
+        });
+
+        async function removeProduct(id) {
+            if (!confirm('Are you sure you want to remove this product?')) return;
+
+            const response = await fetch(`/api/remove-product/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert('Product removed!');
+                fetchProducts();
+            } else {
+                alert('Error removing product.');
+            }
+        }
+
+        fetchProducts();
+    </script>
+</body>
+</html>

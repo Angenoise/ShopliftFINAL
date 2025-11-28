@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Lift - Your Cart</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="window.location.href='shop.html'">🛒 Shop Lift Cart</div>
+        <button onclick="window.location.href='shop.html'">Continue Shopping</button>
+    </header>
+
+    <div class="container">
+        <h2>Items in your Cart</h2>
+        <table class="data-table" id="cartTable">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="cartTableBody">
+                </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                    <td id="cartTotal" style="font-weight: bold;">₱0.00</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="checkout()">Proceed to Payment (Pay Now)</button>
+        </div>
+    </div>
+
+    <div id="paymentModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100;">
+        <div class="container" style="max-width: 500px; margin-top: 100px;">
+            <h2>Payment Form</h2>
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label for="cardName">Card Holder Name:</label>
+                    <input type="text" id="cardName" value="Mark Angelo" required>
+                </div>
+                <div class="form-group">
+                    <label for="cardNumber">Card Number:</label>
+                    <input type="text" id="cardNumber" value="1111222233334444" pattern="[0-9]{16}" maxlength="16" required>
+                </div>
+                <div class="form-group" style="display: flex; gap: 15px;">
+                    <div style="flex-grow: 1;">
+                        <label for="expiry">Expiry (MM/YY):</label>
+                        <input type="text" id="expiry" value="12/26" pattern="[0-9]{2}/[0-9]{2}" maxlength="5" required>
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <label for="cvv">CVV:</label>
+                        <input type="text" id="cvv" value="123" pattern="[0-9]{3,4}" maxlength="4" required>
+                    </div>
+                </div>
+                <p style="margin: 15px 0;">Total to Pay: <strong id="modalTotal">₱0.00</strong></p>
+                <button type="submit">Complete Payment</button>
+                <button type="button" onclick="closeModal()" style="background-color: #aaa; margin-left: 10px;">Cancel</button>
+                <p id="paymentMessage" style="margin-top: 10px;"></p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', displayCart);
+
+        function getCart() {
+            const cart = localStorage.getItem('cart');
+            return cart ? JSON.parse(cart) : [];
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        function displayCart() {
+            const cart = getCart();
+            const tableBody = document.getElementById('cartTableBody');
+            let total = 0;
+            
+            tableBody.innerHTML = '';
+
+            if (cart.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Your cart is empty.</td></tr>';
+            } else {
+                cart.forEach(item => {
+                    const subtotal = item.price * item.quantity;
+                    total += subtotal;
+                    const row = tableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${item.name}</td>
+                        <td>₱${item.price.toFixed(2)}</td> 
+                        <td><input type="number" value="${item.quantity}" min="1" style="width: 50px;" 
+                            onchange="updateQuantity(${item.id}, this.value)"></td>
+                        <td>₱${subtotal.toFixed(2)}</td> 
+                        <td><button style="background-color: red;" onclick="removeItem(${item.id})">Remove</button></td>
+                    `;
+                });
+            }
+
+            // Updated total display to use Peso sign
+            document.getElementById('cartTotal').textContent = `₱${total.toFixed(2)}`;
+            document.getElementById('modalTotal').textContent = `₱${total.toFixed(2)}`;
+        }
+
+        function updateQuantity(id, quantity) {
+            let cart = getCart();
+            const item = cart.find(i => i.id === id);
+            
+            if (item) {
+                const newQty = parseInt(quantity);
+                if (newQty > 0) {
+                    item.quantity = newQty;
+                } else {
+                    cart = cart.filter(i => i.id !== id);
+                }
+                saveCart(cart);
+                displayCart();
+            }
+        }
+
+        function removeItem(id) {
+            let cart = getCart();
+            cart = cart.filter(item => item.id !== id);
+            saveCart(cart);
+            displayCart();
+        }
+
+        function checkout() {
+            if (getCart().length === 0) {
+                alert("Your cart is empty. Add items before checking out.");
+                return;
+            }
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        document.getElementById('paymentForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const paymentMessage = document.getElementById('paymentMessage');
+            
+            const cartItems = getCart();
+            
+            const cardNumber = document.getElementById('cardNumber').value;
+            if (cardNumber.length !== 16 || isNaN(cardNumber)) {
+                paymentMessage.textContent = 'Invalid card number.';
+                paymentMessage.style.color = 'red';
+                return;
+            }
+
+            paymentMessage.textContent = 'Processing payment and verifying stock...';
+            paymentMessage.style.color = 'blue';
+
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const orderItems = cartItems.map(item => ({ id: item.id, quantity: item.quantity }));
+            
+            const response = await fetch('/api/process-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderItems })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                paymentMessage.textContent = 'Payment Successful! Stock Updated. Thank you for your order!';
+                paymentMessage.style.color = 'green';
+                
+                localStorage.removeItem('cart'); 
+
+                setTimeout(() => {
+                    alert('Order Completed! Redirecting to shop.');
+                    window.location.href = 'shop.html';
+                }, 1500);
+
+            } else {
+                paymentMessage.textContent = `Order Failed: ${data.message}`;
+                paymentMessage.style.color = 'red';
+                setTimeout(() => {
+                    closeModal(); 
+                    window.location.href = 'shop.html';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

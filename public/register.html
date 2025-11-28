@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Lift - Register</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo">📝 Create Shop Lift Account</div>
+    </header>
+
+    <div class="container" style="max-width: 400px; margin-top: 80px;">
+        <h2>Register New Account</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="regUsername">Username:</label>
+                <input type="text" id="regUsername" required>
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Password:</label>
+                <input type="password" id="regPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input type="password" id="confirmPassword" required>
+            </div>
+            <p id="message" style="margin-bottom: 10px;"></p>
+            <button type="submit">Register</button>
+            <p style="margin-top: 15px; text-align: center;">
+                Already have an account? <a href="index.html" style="color: var(--primary-green); text-decoration: underline; font-weight: bold;">Login</a>
+            </p>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageElement = document.getElementById('message');
+
+            messageElement.textContent = '';
+            
+            if (password !== confirmPassword) {
+                messageElement.textContent = 'Passwords do not match.';
+                messageElement.style.color = 'red';
+                return;
+            }
+
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                messageElement.textContent = data.message + ' You can now log in.';
+                messageElement.style.color = 'green';
+                document.getElementById('registerForm').reset();
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+
+            } else {
+                messageElement.textContent = data.message;
+                messageElement.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
