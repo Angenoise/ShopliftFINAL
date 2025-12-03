@@ -112,9 +112,16 @@ button {
     font-size: 1em;
     font-weight: bold;
 }
+
 #loginForm button {
     display: block;
     margin: 20px auto;
+}
+
+#loginForm button,
+#registerForm button {
+    display: block;  
+    margin: 20px auto; 
 }
 
 button:hover {
