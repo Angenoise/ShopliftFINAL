@@ -44,13 +44,9 @@ function initializeDB() {
 
             db.get(`SELECT COUNT(*) AS count FROM products`, (err, row) => {
                 if (row && row.count === 0) {
-                    // Prices updated from $15.00 to ₱150.00
                     db.run(`INSERT INTO products (name, description, price, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?)`, ['Eco Coffee Mug', 'A reusable ceramic mug made from recycled materials.', 150.00, 'https://purpleclay.com/cdn/shop/articles/coffee_cups.png?v=1716910046', 100]);
-                    // Prices updated from $25.50 to ₱255.50
                     db.run(`INSERT INTO products (name, description, price, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?)`, ['Organic T-Shirt', 'Made from 100% organic cotton, soft and durable.', 255.50, 'https://marksandspencer.com.ph/cdn/shop/files/SD_01_T41_7341_Y0_X_EC_90_86297a32-4aa6-4598-ba52-745efc330ae4.jpg?v=1703133811', 50]);
-                    // Prices updated from $5.00 to ₱50.00
                     db.run(`INSERT INTO products (name, description, price, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?)`, ['Bamboo Toothbrush', 'Sustainable dental care, pack of 4.', 50.00, 'https://www.smilesofmemorial.com/blog/wp-content/uploads/2024/02/bamboo-toothbrushes-for-better-oral-health.png', 100]); 
-                    // Prices updated from $35.99 to ₱359.90
                     db.run(`INSERT INTO products (name, description, price, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?)`, ['Recycled Glass Vase', 'Unique hand-blown vase for your home decor.', 359.90, 'https://thehomeemporium.com/cdn/shop/files/ECL30091_main-10_1200x1200.jpg?v=1691713312', 150]); 
                     console.log('Default products inserted.');
                 }
