@@ -112,6 +112,10 @@ button {
     font-size: 1em;
     font-weight: bold;
 }
+#loginForm button {
+    display: block;
+    margin: 20px auto;
+}
 
 button:hover {
     background-color: #559c33;
